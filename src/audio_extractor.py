@@ -1,8 +1,8 @@
 import logging
 from moviepy import VideoFileClip
-import whisper
 from pathlib import Path
-
+import whisper
+import json
 
 # -----------------------------
 # Logging setup
@@ -40,22 +40,37 @@ class VideoToTextPipeline:
 
     # -----------------------------
     def transcribe_audio(self, audio_path: str):
-        logger.info(f"Transcribing audio: {audio_path}")
+        logger.info(f"Transcribing audio (segment mode): {audio_path}")
 
-        result = self.model.transcribe(audio_path, language="en")
-        logger.info("Transcription completed")
-        return result["text"]
+        result = self.model.transcribe(
+            audio_path,
+            language="en",
+            verbose=False
+        )
+
+        segments = []
+
+        for seg in result["segments"]:
+            segments.append({
+                "start": seg["start"],
+                "end": seg["end"],
+                "text": seg["text"].strip()
+            })
+
+        logger.info(f"Transcription completed with {len(segments)} segments")
+
+        return segments
 
     # -----------------------------
-    def save_text(self, text: str, output_path: str):
-        logger.info(f"Saving transcription to: {output_path}")
+    def save_segments(self, segments, output_path: str):
+        logger.info(f"Saving segments to: {output_path}")
 
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
         with open(output_path, "w", encoding="utf-8") as f:
-            f.write(text)
+            json.dump(segments, f, ensure_ascii=False, indent=2)
 
-        logger.info("Text file saved successfully")
+        logger.info("Segments saved successfully")
 
     # -----------------------------
     def process_video_to_text(self, video_path: str, target_folder: str):
@@ -64,7 +79,7 @@ class VideoToTextPipeline:
         target = Path(target_folder)
 
         audio_path = target / "extracted_audio.mp3"
-        text_path = target / "transcription.txt"
+        text_path = target / "transcription.json"
 
         if audio_path.exists():
             logger.info(f"Audio already exists: {audio_path}. Skipping extraction.")
@@ -74,8 +89,8 @@ class VideoToTextPipeline:
         if text_path.exists():
             logger.info(f"Transcription already exists: {text_path}. Skipping transcription.")
         else:
-            text = self.transcribe_audio(str(audio_path))
-            self.save_text(text, str(text_path))
+            segments = self.transcribe_audio(str(audio_path))
+            self.save_segments(segments, str(text_path))
 
         logger.info("Pipeline completed successfully")
 
