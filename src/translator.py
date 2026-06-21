@@ -25,7 +25,7 @@ class EnglishToHebrewTranslator:
         self,
         segments_path: str,
         output_path: str
-    ) -> list[dict]:
+    ) -> str:
 
         translation_file = Path(output_path)
 
@@ -36,7 +36,7 @@ class EnglishToHebrewTranslator:
                 f"Skipping translation."
             )
 
-            return self.load_json(output_path)
+            return output_path
 
         return self.translate( segments_path, output_path )
 
@@ -45,7 +45,7 @@ class EnglishToHebrewTranslator:
         self,
         segments_path: str,
         output_path: str
-    ) -> list[dict]:
+    ) -> str:
 
         logger.info("loading segments for translation")
         segments = self.load_json(segments_path)
